@@ -6,18 +6,58 @@ import { DATASET_STYLES } from "./Globe";
 
 // Map of dataset country names and expected country names
 // TODO add more discrepencies
-const COUNTRY_NAME_MAP = {
+const TEMP_COUNTRY_NAME_MAP = {
+  // Country from dataset : Country known by globe
   "Åland": "Finland",
   "United States": "United States of America",
-  "Democratic Republic of the Congo": "Dem. Rep. Congo",
   "Republic of the Congo": "Congo",
-  "South Korea": "Republic of Korea",
-  "North Korea": "Dem. Rep. Korea",
+  "Bosnia And Herzegovina": "Bosnia and Herz.",
+  "Central African Republic": "Central African Rep.",
+  "Dominican Republic": "Dominican Rep.",
+  "Equatorial Guinea": "Eq. Guinea",
+  "Solomon Islands": "Solomon Is.",
+  "Western Sahara": "W. Sahara",
+  "Guinea Bissau": "Guinea-Bissau",
+  "Falkland Islands (Islas Malvinas)": "Falkland Is.",
+  "Congo (Democratic Republic Of The)": "Dem. Rep. Congo",
+  "Burma": "Myanmar",
+  "Czech Republic": "Czechia",
+  "Swaziland": "eSwatini",
+  "Timor Leste": "Timor-Leste",
+  "Dem. Rep. Korea": "North Korea",
+  "Republic of Korea": "South Korea",
+  "Palestina": "Palestine",
+  "Côte D'Ivoire": "Côte d'Ivoire",
+  "S. Sudan": "South Sudan",
 };
 
-function normalizeCountryName(name) {
-  return COUNTRY_NAME_MAP[name] || name;
-}
+const CO2_COUNTRY_NAME_MAP = {
+  // Country from dataset : Country known by globe
+  "Åland": "Finland",
+  "United States": "United States of America",
+  "Republic of the Congo": "Congo",
+  "Bosnia And Herzegovina": "Bosnia and Herz.",
+  "Central African Republic": "Central African Rep.",
+  "Dominican Republic": "Dominican Rep.",
+  "Equatorial Guinea": "Eq. Guinea",
+  "Solomon Islands": "Solomon Is.",
+  "Western Sahara": "W. Sahara",
+  "Guinea Bissau": "Guinea-Bissau",
+  "Falkland Islands (Islas Malvinas)": "Falkland Is.",
+  "Congo (Democratic Republic Of The)": "Dem. Rep. Congo",
+  "Burma": "Myanmar",
+  "Czech Republic": "Czechia",
+  "Swaziland": "eSwatini",
+  "Timor Leste": "Timor-Leste",
+  "Dem. Rep. Korea": "North Korea",
+  "Republic of Korea": "South Korea",
+  "Palestina": "Palestine",
+  "Côte D'Ivoire": "Côte d'Ivoire",
+  "Bosnia and Herzegovina": "Bosnia and Herz.",
+  "Dominican Republic": "Dominican Rep.",
+  "North Macedonia": "Macedonia",
+  "S. Sudan": "South Sudan",
+};
 
 // Menu
 export default function Menu({
@@ -53,7 +93,7 @@ export default function Menu({
 
           rows.push({
             dt: cols[dtIdx]?.slice(0, 10),
-            country: cols[countryIdx],
+            country: cols[countryIdx].trim(),
             value: parseFloat(cols[valueIdx]),
             uncertainty: parseFloat(cols[valueUncertaintyIdx])
           });
@@ -111,8 +151,13 @@ export default function Menu({
       if (r.dt === dateSelected && !Number.isNaN(r.value)) {
 
         // Matches same countries if an alternative name exist
-        // TODO make if statement for different datasets with different country names
-        const globeName = normalizeCountryName(r.country).trim();
+        let globeName = ""
+        if (activeDatasetKey === "temperature") {
+            globeName = TEMP_COUNTRY_NAME_MAP[r.country] || r.country;
+        }
+        else if (activeDatasetKey === "co2") {
+            globeName = CO2_COUNTRY_NAME_MAP[r.country] || r.country;
+        }        
         map[globeName] = r.value;
       }
     }

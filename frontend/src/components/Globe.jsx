@@ -84,8 +84,8 @@ export default function Globe3D({
   datasetKey = "temperature",
 }) {
 
-  console.log(dataByCountry);
   console.log(datasetKey);
+  console.log(dataByCountry);
 
   const globeRef = useRef();
   const [countries, setCountries] = useState([]);
