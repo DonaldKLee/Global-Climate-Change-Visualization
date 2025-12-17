@@ -2,112 +2,126 @@ import { useEffect, useState } from "react";
 import landTempByCountry from "../assets/GlobalLandTemperaturesByCountry.csv?url";
 import co2Emissions from "../assets/owid-co2-data.csv?url";
 
-import { TEMP_MIN, TEMP_MAX, tempColor } from "./Globe"; // import from Globe
+import { DATASET_STYLES } from "./Globe";
 
-// Map of mismatched countries
+// Map of dataset country names and expected country names
+// TODO add more discrepencies
 const COUNTRY_NAME_MAP = {
   "Åland": "Finland",
   "United States": "United States of America",
+  "Democratic Republic of the Congo": "Dem. Rep. Congo",
+  "Republic of the Congo": "Congo",
+  "South Korea": "Republic of Korea",
+  "North Korea": "Dem. Rep. Korea",
 };
 
-function normalizeCountryName(csvName) {
-  return COUNTRY_NAME_MAP[csvName] || csvName;
+function normalizeCountryName(name) {
+  return COUNTRY_NAME_MAP[name] || name;
 }
 
+// Menu
 export default function Menu({
   dateSelected,
+  activeDatasetKey,
+  datasetStyle,
+  datasetOptions,
   onChangeDate,
-  onChangeDataByCountry, // (map) => void
+  onChangeDatasetKey,
+  onChangeDataByCountry,
 }) {
-  const [rows, setRows] = useState([]);
+  const [tempRows, setTempRows] = useState([]);
+  const [co2Rows, setCo2Rows] = useState([]);
 
-  // Load CSV once
+  // Load temperature by country dataset
   useEffect(() => {
     fetch(landTempByCountry)
       .then((r) => r.text())
       .then((text) => {
-        const lines = text.trim().split("\n");
-        if (lines.length <= 1) return;
-
-        const headerLine = lines[0];
-        const headers = headerLine
-          .replace("\r", "")
-          .replace("\ufeff", "")
-          .split(",");
+        const lines = text.split("\n");
+        const headers = lines[0].split(",");
 
         const dtIdx = headers.indexOf("dt");
-        const countryIdx = headers.indexOf("Country");
+        const countryIdx = 3; // hard-coded, using indexOf adds a "\r" in front of "Country"
         const valueIdx = headers.indexOf("AverageTemperature");
+        const valueUncertaintyIdx = headers.indexOf("AverageTemperatureUncertainty");
 
-        if (dtIdx === -1 || countryIdx === -1 || valueIdx === -1) {
-          console.error("Missing dt / Country / AverageTemperature columns");
-          return;
-        }
-
-        const maxIdx = Math.max(dtIdx, countryIdx, valueIdx);
-        const parsed = [];
+        const rows = [];
 
         for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
+          const cols = lines[i].split(",");
+          if (!cols[countryIdx]) continue;
 
-          const cols = line.replace("\r", "").split(",");
-          if (cols.length <= maxIdx) continue;
-
-          const dtRaw = cols[dtIdx];
-          const countryRaw = cols[countryIdx];
-          const valueRaw = cols[valueIdx];
-
-          if (!countryRaw) continue;
-
-          const country = countryRaw.trim();
-          const dt = dtRaw ? dtRaw.slice(0, 10) : "";
-          const value = valueRaw ? parseFloat(valueRaw) : NaN;
-
-          parsed.push({ dt, country, value });
+          rows.push({
+            dt: cols[dtIdx]?.slice(0, 10),
+            country: cols[countryIdx],
+            value: parseFloat(cols[valueIdx]),
+            uncertainty: parseFloat(cols[valueUncertaintyIdx])
+          });
         }
 
-        console.log("Parsed sample:", parsed.slice(0, 10));
-        setRows(parsed);
-      })
-      .catch((err) => {
-        console.error("Error loading CSV:", err);
+        setTempRows(rows);
       });
   }, []);
 
-  // Recompute { countryName: value } when rows or date changes
+  // Load CO2 emission by country dataset
   useEffect(() => {
-    if (!rows.length) return;
+    fetch(co2Emissions)
+      .then((r) => r.text())
+      .then((text) => {
+        const lines = text.split("\n");
+        const headers = lines[0].split(",");
+
+        const yearIdx = headers.indexOf("year");
+        const countryIdx = headers.indexOf("country");
+        const valueIdx = headers.indexOf("co2_per_capita");
+        const populationIdx = headers.indexOf("population");
+
+        const rows = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",");
+          if (!cols[countryIdx] || !cols[yearIdx]) continue;
+
+          rows.push({
+            dt: `${cols[yearIdx]}-01-01`,
+            country: cols[countryIdx],
+            value: parseFloat(cols[valueIdx]),
+            population: cols[populationIdx]
+          });
+        }
+
+        setCo2Rows(rows);
+      });
+  }, []);
+
+  // Recompute dataByCountry WHEN dataset OR date CHANGES
+  useEffect(() => {
+    let rows = [];
+    if (activeDatasetKey === "temperature") {
+        console.log(`Using ${activeDatasetKey} dataset`)
+        rows = tempRows;
+    }
+    else if (activeDatasetKey === "co2") {
+        console.log(`Using ${activeDatasetKey} dataset`)
+        rows = co2Rows;
+    }
 
     const map = {};
     for (const r of rows) {
-      if (!r.country || !r.dt) continue;
       if (r.dt === dateSelected && !Number.isNaN(r.value)) {
-        const globeName = normalizeCountryName(r.country);
+
+        // Matches same countries if an alternative name exist
+        // TODO make if statement for different datasets with different country names
+        const globeName = normalizeCountryName(r.country).trim();
         map[globeName] = r.value;
       }
     }
-    console.log("Data map for", dateSelected, map);
+
     onChangeDataByCountry(map);
-  }, [rows, dateSelected, onChangeDataByCountry]);
+  }, [dateSelected, activeDatasetKey, tempRows, co2Rows]);
 
-  const MIN_DATE = "1700-01-01";
-  const MAX_DATE = "2013-01-01";
-
-  function handleDateChange(e) {
-    const newDate = e.target.value;
-    onChangeDate(newDate);
-  }
-
-  const legendStops = [
-    { label: `≤ ${TEMP_MIN}°C`, value: TEMP_MIN },
-    { label: "-10°C", value: -10 },
-    { label: "0°C", value: 0 },
-    { label: "10°C", value: 10 },
-    { label: "20°C", value: 20 },
-    { label: "30°C", value: 30 },
-    { label: `≥ ${TEMP_MAX}°C`, value: TEMP_MAX },
-  ];
+  const legendStops = datasetStyle.legendStops;
+  const colorFn = datasetStyle.colorFn;
 
   return (
     <div
@@ -117,91 +131,75 @@ export default function Menu({
         top: 12,
         left: 12,
         background: "rgba(2,6,23,0.8)",
-        border: "1px solid #1f2937",
         borderRadius: 12,
-        padding: "10px 12px",
+        padding: 12,
+        border: "1px solid #1f2937",
+        width: 280,
         color: "#e5e7eb",
-        maxWidth: 260,
       }}
     >
-      <h1 style={{ margin: 0, fontSize: 16 }}>Menu</h1>
+      <h1 style={{ fontSize: 16, margin: 0 }}>Menu</h1>
 
-      <div style={{ marginTop: 10 }}>
-        <label
+      {/* Dataset */}
+      <div style={{ marginTop: 12 }}>
+        <label style={{ fontSize: 12, opacity: 0.8 }}>Dataset</label>
+        <select
+          value={activeDatasetKey}
+          onChange={(e) => onChangeDatasetKey(e.target.value)}
           style={{
-            fontSize: 12,
-            opacity: 0.8,
-            display: "block",
-            marginBottom: 4,
+            width: "100%",
+            marginTop: 4,
+            padding: "6px 8px",
+            borderRadius: 8,
+            border: "1px solid #334155",
+            background: "transparent",
+            color: "white",
           }}
         >
-          Date (dt)
-        </label>
+          {datasetOptions.map((d) => (
+            <option key={d.key} value={d.key} style={{ color: "black" }}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Date */}
+      <div style={{ marginTop: 12 }}>
+        <label style={{ fontSize: 12, opacity: 0.8 }}>Date</label>
         <input
           type="date"
           value={dateSelected}
-          min={MIN_DATE}
-          max={MAX_DATE}
-          onChange={handleDateChange}
+          onChange={(e) => onChangeDate(e.target.value)}
           style={{
-            background: "transparent",
-            color: "#e5e7eb",
-            border: "1px solid #334155",
-            borderRadius: 8,
-            padding: "6px 8px",
             width: "100%",
+            marginTop: 4,
+            padding: "6px 8px",
+            borderRadius: 8,
+            border: "1px solid #334155",
+            background: "transparent",
+            color: "white",
           }}
         />
       </div>
 
       {/* Legend */}
-      <div style={{ marginTop: 12 }}>
-        <div
-          style={{
-            fontSize: 12,
-            opacity: 0.8,
-            marginBottom: 4,
-          }}
-        >
-          Temperature scale (°C)
+      <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 12, marginBottom: 6, opacity: 0.8 }}>
+          {datasetStyle.label} ({datasetStyle.unit})
         </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 4,
-            alignItems: "flex-end",
-          }}
-        >
+
+        <div style={{ display: "flex", gap: 6 }}>
           {legendStops.map((stop) => (
-            <div
-              key={stop.label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-                flex: 1,
-              }}
-            >
+            <div key={stop.label} style={{ textAlign: "center", flex: 1 }}>
               <div
                 style={{
-                  width: "100%",
-                  height: 10,
+                  height: 12,
                   borderRadius: 4,
-                  background: tempColor(stop.value),
+                  background: colorFn(stop.value),
                 }}
               />
-              <div
-                style={{
-                  fontSize: 10,
-                  textAlign: "center",
-                  opacity: 0.85,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {stop.label}
-              </div>
+              <div style={{ fontSize: 10, opacity: 0.85 }}>{stop.label}</div>
             </div>
           ))}
         </div>
