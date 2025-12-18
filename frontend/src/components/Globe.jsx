@@ -31,8 +31,8 @@ function co2Color(value) {
   const t = Math.max(CO2_MIN, Math.min(CO2_MAX, value));
   const x = (t - CO2_MIN) / (CO2_MAX - CO2_MIN);
 
-  if (x < 0.2) return "#ede9fe";
-  if (x < 0.4) return "#c4b5fd";
+  if (x < 0.2) return "#dcd4f9ff";
+  if (x < 0.4) return "#b8a7f8ff";
   if (x < 0.6) return "#a855f7";
   if (x < 0.8) return "#db2777";
   return "#b91c1c";
@@ -84,9 +84,6 @@ export default function Globe3D({
   datasetKey = "temperature",
 }) {
 
-  console.log(datasetKey);
-  console.log(dataByCountry);
-
   const globeRef = useRef();
   const [countries, setCountries] = useState([]);
   const [hoverD, setHoverD] = useState(null);
@@ -122,23 +119,61 @@ export default function Globe3D({
 
   const polygonCapColor = (d) => {
     const name = getName(d);
-    const value = dataByCountry[name];
+    const entry = dataByCountry[name];
+
+    const value = typeof entry === "number" ? entry : entry?.value;
+
     return hoverD && getName(hoverD) === name ? "#fff" : colorFn(value);
   };
 
+  // This is the modal that appears beside a country on hover
   const polygonLabel = (d) => {
     const name = getName(d);
-    const val = dataByCountry[name];
-    return `
-      <div style="padding:6px 8px;font-size:12px;">
-        <b>${name}</b><br/>
-        ${label}: ${val == null ? "—" : val.toFixed(2)} ${unit}
-      </div>
-    `;
+    const entry = dataByCountry[name];
+
+    const value = typeof entry === "number" ? entry : entry?.value;
+
+    if (datasetKey === "temperature") {
+      const uncertainty =
+        typeof entry === "object" && entry != null ? entry.uncertainty : null;
+
+      return `
+        <div style="padding:6px 8px;font-size:12px;">
+          <b>${name}</b><br/>
+          ${label}: ${value == null || Number.isNaN(value) ? "—" : value.toFixed(2)} ${unit}<br/>
+          Uncertainty: ${
+            uncertainty == null || Number.isNaN(uncertainty) ? "—" : uncertainty.toFixed(2)
+          } ${unit}
+        </div>
+      `;
+    }
+
+    // co2
+    else if (datasetKey === "co2") {
+      const population =
+        typeof entry === "object" && entry != null ? entry.population : null;
+      const gdp =
+        typeof entry === "object" && entry != null ? entry.gdp : null;
+      const energy =
+        typeof entry === "object" && entry != null ? entry.energy : null;
+      const co2 =
+        typeof entry === "object" && entry != null ? entry.co2 : null;
+
+      return `
+        <div style="padding:6px 8px;font-size:12px;">
+          <b>${name}</b><br/>
+          ${label}: ${value == null || Number.isNaN(value) ? "—" : value.toFixed(2)} ${unit}<br/>
+          Population: ${population == null || Number.isNaN(population) ? "—" : population.toFixed(0)} people<br/>
+          GDP: ${gdp == null || Number.isNaN(gdp) ? "—" : gdp.toFixed(0)}<br/>
+          Energy: ${energy == null || Number.isNaN(energy) ? "—" : energy.toFixed(2)} TWh<br/>
+          CO₂ (total): ${co2 == null || Number.isNaN(co2) ? "—" : co2.toFixed(2)} MtCO₂
+        </div>
+      `;
+    }
   };
 
   return (
-    <div style={{ height: "80vh", width: "100%", position: "relative" }}>
+    <div style={{ width: "100%", position: "relative" }}>
       <Globe
         ref={globeRef}
         backgroundColor="#0b1220"

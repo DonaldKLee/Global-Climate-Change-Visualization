@@ -3,6 +3,7 @@ import "./App.css";
 
 import Globe3D, { DATASET_STYLES, DATASET_OPTIONS } from "./components/Globe";
 import Menu from "./components/Menu";
+import Info from "./components/Info";
 
 function App() {
   const [dateSelected, setDateSelected] = useState("1900-01-01");
@@ -30,6 +31,8 @@ function App() {
         onChangeDatasetKey={setActiveDatasetKey}
         onChangeDataByCountry={setDataByCountry}
       />
+
+      <Info />
     </>
   );
 }

@@ -9,10 +9,18 @@
 - Download temperature dataset
 - Load temperature changes dataset here
 - Link to each contry
-- Colour map, if T <> xyz then this colour
-
+- Colour map
 - Load greenhouse gas emissions dataset
 - repeat
-- Load sea level dataset, is it possible to add colours to the ocean?
+- Load sea level dataset, is it possible to add colours to the ocean? if not, make a chart
 - Implement time range selector
-- Implement chatbot
+- include global temp chart
+- Implement info boxes for temperature and co2 emission
+    - include what we can do to slow down the effects
+    - sea levels, etc
+
+## Stretch Goals
+- clean code
+    - move to components
+    - use external css
+- Implement chatbot?
