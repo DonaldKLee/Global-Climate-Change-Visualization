@@ -173,7 +173,7 @@ export default function Globe3D({
   };
 
   return (
-    <div style={{ width: "100%", position: "relative" }}>
+    <div style={{ height: "100vh", width: "100%", position: "relative" }}>
       <Globe
         ref={globeRef}
         backgroundColor="#0b1220"
