@@ -18,6 +18,7 @@
 - Implement info boxes for temperature and co2 emission
     - include what we can do to slow down the effects
     - sea levels, etc
+- made mobile responsive
 
 ## Stretch Goals
 - clean code
