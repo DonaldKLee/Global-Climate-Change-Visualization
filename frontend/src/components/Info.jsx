@@ -133,7 +133,7 @@ export default function Info() {
           </div>
 
           <div style={{ marginTop: 10, ...muted}}>
-            Note: global average temperature prior to 1850 is skewed due to lack of data.
+            Note: temperature data before 1880 is excluded from this visualization.
           </div>
         </div>
 

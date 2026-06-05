@@ -6,6 +6,10 @@ import globalTemps from "../assets/GlobalTemperatures.csv?url";
 
 import { DATASET_STYLES } from "./Globe";
 
+const MIN_RENDER_DATE = "1880-01-01";
+const MIN_RENDER_YEAR = 1880;
+const MIN_RENDER_MONTH_INDEX = MIN_RENDER_YEAR * 12;
+
 // Map of dataset country names and expected country names
 const TEMP_COUNTRY_NAME_MAP = {
   // Country from dataset : Country known by globe
@@ -160,7 +164,7 @@ export default function Menu({
   }, [tempAvailableDatesSorted]);
 
   const tempMinMonthIndex = useMemo(() => {
-    if (!tempAvailableMonthKeysSorted.length) return 1800 * 12 + 0;
+    if (!tempAvailableMonthKeysSorted.length) return MIN_RENDER_MONTH_INDEX;
     return tempAvailableMonthKeysSorted[0];
   }, [tempAvailableMonthKeysSorted]);
 
@@ -183,7 +187,7 @@ export default function Menu({
   }, [co2Rows]);
 
   const co2MinYear = useMemo(
-    () => (co2YearsSorted.length ? co2YearsSorted[0] : 1800),
+    () => (co2YearsSorted.length ? co2YearsSorted[0] : MIN_RENDER_YEAR),
     [co2YearsSorted]
   );
   const co2MaxYear = useMemo(
@@ -328,8 +332,11 @@ export default function Menu({
           const cols = lines[i].split(",");
           if (!cols[countryIdx]) continue;
 
+          const dt = cols[dtIdx]?.slice(0, 10);
+          if (!dt || dt < MIN_RENDER_DATE) continue;
+
           rows.push({
-            dt: cols[dtIdx]?.slice(0, 10),
+            dt,
             country: cols[countryIdx].trim(),
             value: parseFloat(cols[valueIdx]),
             uncertainty: parseFloat(cols[valueUncertaintyIdx]),
@@ -364,11 +371,14 @@ export default function Menu({
           const cols = lines[i].split(",");
           if (!cols[countryIdx] || !cols[yearIdx]) continue;
 
+          const year = parseInt(cols[yearIdx], 10);
+          if (!Number.isFinite(year) || year < MIN_RENDER_YEAR) continue;
+
           const country = cols[countryIdx];
           if (CO2_IGNORE.has(country)) continue;
 
           rows.push({
-            dt: `${cols[yearIdx]}-01-01`,
+            dt: `${year}-01-01`,
             country: cols[countryIdx],
             co2: parseFloat(cols[co2TotalIdx]),
             population: parseFloat(cols[populationIdx]),
@@ -441,6 +451,7 @@ export default function Menu({
           const cols = line.split(",");
           const dt = cols[dtIdx]?.slice(0, 10);
           if (!dt) continue;
+          if (dt < MIN_RENDER_DATE) continue;
 
           const land = parseFloat(cols[landIdx]);
           const landOcean = parseFloat(cols[landOceanIdx]);
@@ -467,10 +478,8 @@ export default function Menu({
   useEffect(() => {
     let rows = [];
     if (activeDatasetKey === "temperature") {
-      console.log(`Using ${activeDatasetKey} dataset`);
       rows = tempRows;
     } else if (activeDatasetKey === "co2") {
-      console.log(`Using ${activeDatasetKey} dataset`);
       rows = co2Rows;
     }
 
@@ -892,6 +901,7 @@ export default function Menu({
 
         <input
           type="date"
+          min={MIN_RENDER_DATE}
           value={dateSelected}
           onChange={(e) => handleDateInputChange(e.target.value)}
           style={{
